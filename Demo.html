@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>So Sánh FP/FN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: A single interactive card is presented to focus the user's attention entirely on the trade-off concept. The structure places the descriptive text and the interactive slider directly below the visualization, creating a clear and linear flow for user interaction and understanding. -->
+    <!-- Visualization & Content Choices: Report Info: FP/FN Trade-off -> Goal: Compare/Explore -> Viz: Interactive Slider + Bar Chart (Chart.js) + Dynamic Text -> Interaction: User adjusts slider to see real-time impact on FP/FN rates and industry-specific consequences -> Justification: The bar chart provides a direct side-by-side comparison of the two error types, making the trade-off visually clear. CONFIRM: No SVG/Mermaid used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #fdfaf7;
+            color: #4a4a4a;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="antialiased flex items-center justify-center min-h-screen p-4">
+
+    <main class="w-full max-w-2xl">
+        <div class="card p-8">
+            <h3 class="text-2xl font-bold text-center text-blue-800 mb-6">Mô Phỏng Sự Đánh Đổi (Trade-off)</h3>
+            <p class="text-center text-sm text-gray-500 mb-4">Hãy kéo thanh trượt để điều chỉnh ngưỡng phát hiện và xem tỷ lệ FP/FN thay đổi như thế nào đối với các ngành khác nhau.</p>
+            <div class="chart-container mb-6">
+                <canvas id="tradeoffChart"></canvas>
+            </div>
+            <input id="thresholdSlider" type="range" min="0" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-xs text-gray-500 mt-2">
+                <span>Ưu tiên giảm FP (Lỏng lẻo)</span>
+                <span>Ưu tiên giảm FN (Nghiêm ngặt)</span>
+            </div>
+            <div id="industryImpact" class="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h5 class="font-bold text-amber-800 mb-2 text-center" id="impactTitle">Cân Bằng - Thương Mại Điện Tử</h5>
+                <p class="text-sm text-amber-700 text-center" id="impactDescription">Cần cân bằng giữa việc chặn bot cào giá (giảm FN) và đảm bảo người dùng mua sắm không bị gián đoạn (giảm FP).</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const slider = document.getElementById('thresholdSlider');
+            const impactTitle = document.getElementById('impactTitle');
+            const impactDescription = document.getElementById('impactDescription');
+            const ctx = document.getElementById('tradeoffChart').getContext('2d');
+            
+            const impactData = {
+                fintech: {
+                    title: "Ưu Tiên An Toàn - Fintech/Ngân Hàng",
+                    description: "Ưu tiên giảm False Negatives (FN) để ngăn chặn mọi giao dịch gian lận, chấp nhận một số phiền toái cho người dùng (FP cao hơn)."
+                },
+                social: {
+                    title: "Ưu Tiên Trải Nghiệm - Mạng Xã Hội",
+                    description: "Ưu tiên giảm False Positives (FP) để không chặn nhầm người dùng thật, giữ cho trải nghiệm mượt mà, chấp nhận rủi ro bỏ lọt một số bot."
+                },
+                ecommerce: {
+                    title: "Cân Bằng - Thương Mại Điện Tử",
+                    description: "Cần cân bằng giữa việc chặn bot cào giá (giảm FN) và đảm bảo người dùng mua sắm không bị gián đoạn (giảm FP)."
+                }
+            };
+            
+            let tradeoffChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['False Positives (FP)', 'False Negatives (FN)'],
+                    datasets: [{
+                        label: 'Tỷ lệ lỗi',
+                        data: [50, 50],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',
+                            'rgba(59, 130, 246, 0.7)',
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(59, 130, 246, 1)',
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.raw + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            function updateTradeoff(value) {
+                const fn_rate = value;
+                const fp_rate = 100 - value;
+                
+                tradeoffChart.data.datasets[0].data[0] = fp_rate;
+                tradeoffChart.data.datasets[0].data[1] = fn_rate;
+                tradeoffChart.update();
+
+                if (value > 75) {
+                    impactTitle.textContent = impactData.fintech.title;
+                    impactDescription.textContent = impactData.fintech.description;
+                } else if (value < 25) {
+                    impactTitle.textContent = impactData.social.title;
+                    impactDescription.textContent = impactData.social.description;
+                } else {
+                    impactTitle.textContent = impactData.ecommerce.title;
+                    impactDescription.textContent = impactData.ecommerce.description;
+                }
+            }
+
+            slider.addEventListener('input', (e) => {
+                updateTradeoff(e.target.value);
+            });
+            
+            updateTradeoff(50);
+        });
+    </script>
+</body>
+</html>
